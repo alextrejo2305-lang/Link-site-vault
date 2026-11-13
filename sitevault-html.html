@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Vault</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+            --primary: #2563eb;
+            --header: #1e3a8a;
+        }
+        [data-theme="dark"] {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #e2e8f0;
+            --border: #334155;
+            --primary: #3b82f6;
+            --header: #0f172a;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            transition: background 0.3s, color 0.3s;
+        }
+        header {
+            background: var(--header);
+            color: white;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        header h1 { margin: 0; font-size: 1.4rem; }
+        .user-info { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+        .role {
+            background: #fbbf24;
+            color: #1e3a8a;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        .role.mod { background: #34d399; }
+        .role.dev { background: #60a5fa; }
+        .role.admin { background: #f87171; }
+        .role.owner { background: #a855f7; color: white; }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        @media (max-width: 900px) {
+            .container { grid-template-columns: 1fr; }
+        }
+        .panel {
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            padding: 1.2rem;
+            border: 1px solid var(--border);
+        }
+        h2 {
+            margin-top: 0;
+            color: var(--primary);
+            font-size: 1.15rem;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+        .site {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.8rem;
+            margin-bottom: 0.8rem;
+            background: var(--card);
+        }
+        .site a { color: var(--primary); text-decoration: none; font-weight: 500; }
+        .site a:hover { text-decoration: underline; }
+        .meta { font-size: 0.8rem; color: #64748b; }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px 10px;
+            margin: 4px 0;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--card);
+            color: var(--text);
+            font-family: inherit;
+        }
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+        button:hover { opacity: 0.9; }
+        button.danger { background: #dc2626; }
+        button.small { padding: 4px 10px; font-size: 0.85rem; }
+        #chat-box {
+            height: 380px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            background: var(--bg);
+            margin-bottom: 10px;
+        }
+        .message {
+            margin-bottom: 8px;
+            padding: 6px 10px;
+            background: var(--card);
+            border-radius: 8px;
+            border-left: 3px solid var(--primary);
+        }
+        .message .name { font-weight: bold; color: var(--primary); }
+        .message .time { font-size: 0.75rem; color: #94a3b8; margin-left: 6px; }
+        .login-box {
+            max-width: 360px;
+            margin: 10vh auto;
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border: 1px solid var(--border);
+        }
+        .error { color: #dc2626; margin-bottom: 1rem; }
+        .theme-toggle {
+            background: transparent;
+            border: 1px solid white;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .hidden { display: none !important; }
+        .logout { color: white; text-decoration: none; background: #475569; padding: 6px 12px; border-radius: 6px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div id="login-view" class="login-box">
+        <h2 id="login-title">Login to Site Vault</h2>
+        <div id="error" class="error hidden"></div>
+        <input type="text" id="username" placeholder="Username" autocomplete="username">
+        <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+        <button onclick="loginOrRegister()" id="submit-btn">Login</button>
+        <p style="text-align:center; margin-top:1rem;">
+            <a href="#" onclick="toggleAuth(); return false;" id="switch-link">No account? Register</a>
+        </p>
+        <p style="font-size:0.85rem; color:#666; text-align:center;">Default owner: admin / admin123</p>
+        <div style="text-align:center; margin-top:1rem;">
+            <button class="theme-toggle" onclick="toggleTheme()">Toggle Dark Mode</button>
+        </div>
+    </div>
+
+    <div id="app-view" class="hidden">
+        <header>
+            <h1>Site Vault</h1>
+            <div class="user-info">
+                <span>Logged in as <strong id="current-user"></strong></span>
+                <span id="current-role" class="role"></span>
+                <button class="theme-toggle" onclick="toggleTheme()">Dark Mode</button>
+                <a href="#" class="logout" onclick="logout(); return false;">Logout</a>
+            </div>
+        </header>
+
+        <div class="container">
+            <div class="panel">
+                <h2>Website Vault</h2>
+                <input type="text" id="site-name" placeholder="Site name">
+                <input type="url" id="site-url" placeholder="https://example.com">
+                <textarea id="site-desc" placeholder="Short description (optional)" rows="2"></textarea>
+                <button onclick="addSite()">Add Site</button>
+                <hr style="margin:1.2rem 0; border:none; border-top:1px solid var(--border);">
+                <div id="sites-list"></div>
+            </div>
+
+            <div>
+                <div class="panel" style="margin-bottom:1rem;">
+                    <h2>Live Chat</h2>
+                    <div id="chat-box"></div>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="message-input" placeholder="Type a message..." style="flex:1;">
+                        <button onclick="sendMessage()">Send</button>
+                    </div>
+                </div>
+
+                <div id="owner-codes" class="panel hidden" style="margin-bottom:1rem;">
+                    <h2>Role Codes (Owner only — secret)</h2>
+                    <p>Only you can see these. Share the codes you want with others.</p>
+                    <label>Owner code:</label>
+                    <input type="text" id="owner-code">
+                    <label>Admin code:</label>
+                    <input type="text" id="admin-code">
+                    <label>Dev code:</label>
+                    <input type="text" id="dev-code">
+                    <button onclick="saveCodes()">Update Codes</button>
+                </div>
+
+                <div id="upgrade-panel" class="panel hidden" style="margin-bottom:1rem;">
+                    <h2>Enter Role Code</h2>
+                    <p>Enter a special code to upgrade your role:</p>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="upgrade-code" placeholder="Enter code" style="flex:1;">
+                        <button onclick="upgradeRole()">Upgrade</button>
+                    </div>
+                </div>
+
+                <div id="users-panel" class="panel hidden">
+                    <h2>Manage Users (Owner/Admin)</h2>
+                    <div id="users-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isRegister = false;
+        let currentUser = null;
+
+        function getData() {
+            return JSON.parse(localStorage.getItem('sitevault') || '{}');
+        }
+        function saveData(data) {
+            localStorage.setItem('sitevault', JSON.stringify(data));
+        }
+
+        function init() {
+            let data = getData();
+            if (!data.users) {
+                data = {
+                    users: [{ username: 'admin', password: 'admin123', role: 'owner' }],
+                    sites: [],
+                    messages: [],
+                    ownerCode: 'OWNER2026',
+                    adminCode: 'ADMIN2026',
+                    devCode: 'DEV2026'
+                };
+                saveData(data);
+            } else {
+                // Migrate old data if needed
+                if (!data.ownerCode) data.ownerCode = 'OWNER2026';
+                if (!data.adminCode) data.adminCode = 'ADMIN2026';
+                if (!data.devCode) data.devCode = 'DEV2026';
+                const adminUser = data.users.find(u => u.username === 'admin');
+                if (adminUser && adminUser.role === 'admin') adminUser.role = 'owner';
+                saveData(data);
+            }
+            if (localStorage.getItem('theme') === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+            const saved = sessionStorage.getItem('currentUser');
+            if (saved) {
+                currentUser = JSON.parse(saved);
+                showApp();
+            }
+        }
+
+        function toggleAuth() {
+            isRegister = !isRegister;
+            document.getElementById('login-title').textContent = isRegister ? 'Create Account' : 'Login to Site Vault';
+            document.getElementById('submit-btn').textContent = isRegister ? 'Register' : 'Login';
+            document.getElementById('switch-link').textContent = isRegister ? 'Already have an account? Login' : 'No account? Register';
+            document.getElementById('error').classList.add('hidden');
+        }
+
+        function loginOrRegister() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const errorEl = document.getElementById('error');
+            if (username.length < 3 || password.length < 4) {
+                errorEl.textContent = 'Username min 3 chars, password min 4';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            let data = getData();
+            if (isRegister) {
+                if (data.users.find(u => u.username === username)) {
+                    errorEl.textContent = 'Username already taken';
+                    errorEl.classList.remove('hidden');
+                    return;
+                }
+                data.users.push({ username, password, role: 'user' });
+                saveData(data);
+                isRegister = false;
+                toggleAuth();
+                errorEl.textContent = 'Registered! Now login.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            const user = data.users.find(u => u.username === username && u.password === password);
+            if (!user) {
+                errorEl.textContent = 'Wrong username or password';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            currentUser = user;
+            sessionStorage.setItem('currentUser', JSON.stringify(user));
+            showApp();
+        }
+
+        function showApp() {
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('app-view').classList.remove('hidden');
+            document.getElementById('current-user').textContent = currentUser.username;
+            const roleEl = document.getElementById('current-role');
+            roleEl.textContent = currentUser.role.toUpperCase();
+            roleEl.className = 'role ' + currentUser.role;
+
+            const isOwner = currentUser.role === 'owner';
+            const isAdminOrOwner = ['admin', 'owner'].includes(currentUser.role);
+
+            document.getElementById('owner-codes').classList.toggle('hidden', !isOwner);
+            document.getElementById('users-panel').classList.toggle('hidden', !isAdminOrOwner);
+            document.getElementById('upgrade-panel').classList.toggle('hidden', isOwner);
+
+            if (isOwner) {
+                const data = getData();
+                document.getElementById('owner-code').value = data.ownerCode || '';
+                document.getElementById('admin-code').value = data.adminCode || '';
+                document.getElementById('dev-code').value = data.devCode || '';
+            }
+            if (isAdminOrOwner) renderUsers();
+            renderSites();
+            renderChat();
+        }
+
+        function logout() {
+            sessionStorage.removeItem('currentUser');
+            currentUser = null;
+            location.reload();
+        }
+
+        function addSite() {
+            const name = document.getElementById('site-name').value.trim();
+            const url = document.getElementById('site-url').value.trim();
+            const desc = document.getElementById('site-desc').value.trim();
+            if (!name || !url) return;
+            const data = getData();
+            data.sites.unshift({
+                name, url, description: desc,
+                added_by: currentUser.username,
+                created_at: new Date().toLocaleString()
+            });
+            saveData(data);
+            document.getElementById('site-name').value = '';
+            document.getElementById('site-url').value = '';
+            document.getElementById('site-desc').value = '';
+            renderSites();
+        }
+
+        function renderSites() {
+            const data = getData();
+            const list = document.getElementById('sites-list');
+            list.innerHTML = '';
+            if (data.sites.length === 0) {
+                list.innerHTML = '<p>No sites yet. Add the first one!</p>';
+                return;
+            }
+            data.sites.forEach((site, i) => {
+                const div = document.createElement('div');
+                div.className = 'site';
+                let delBtn = '';
+                if (['mod','dev','admin','owner'].includes(currentUser.role)) {
+                    delBtn = `<button class="danger small" onclick="deleteSite(${i})">Delete</button>`;
+                }
+                div.innerHTML = `
+                    <h3><a href="${site.url}" target="_blank" rel="noopener">${escapeHtml(site.name)}</a></h3>
+                    ${site.description ? `<p>${escapeHtml(site.description)}</p>` : ''}
+                    <div class="meta">Added by ${escapeHtml(site.added_by)} • ${site.created_at}</div>
+                    ${delBtn}
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function deleteSite(index) {
+            if (!confirm('Delete this site?')) return;
+            const data = getData();
+            data.sites.splice(index, 1);
+            saveData(data);
+            renderSites();
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const msg = input.value.trim();
+            if (!msg) return;
+            const data = getData();
+            data.messages.push({
+                username: currentUser.username,
+                role: currentUser.role,
+                message: msg,
+                timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            });
+            if (data.messages.length > 100) data.messages = data.messages.slice(-100);
+            saveData(data);
+            input.value = '';
+            renderChat();
+        }
+
+        function renderChat() {
+            const data = getData();
+            const box = document.getElementById('chat-box');
+            box.innerHTML = '';
+            data.messages.forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'message';
+                const roleBadge = m.role ? `<span class="role ${m.role}">${m.role.toUpperCase()}</span>` : '';
+                div.innerHTML = `<span class="name">${escapeHtml(m.username)}</span> ${roleBadge} <span class="time">${m.timestamp}</span><div>${escapeHtml(m.message)}</div>`;
+                box.appendChild(div);
+            });
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function saveCodes() {
+            if (currentUser.role !== 'owner') return;
+            const data = getData();
+            data.ownerCode = document.getElementById('owner-code').value.trim() || 'OWNER2026';
+            data.adminCode = document.getElementById('admin-code').value.trim() || 'ADMIN2026';
+            data.devCode = document.getElementById('dev-code').value.trim() || 'DEV2026';
+            saveData(data);
+            alert('Codes updated! Only you can see them.');
+        }
+
+        function upgradeRole() {
+            const code = document.getElementById('upgrade-code').value.trim();
+            const data = getData();
+            let newRole = null;
+            if (code === data.ownerCode) newRole = 'owner';
+            else if (code === data.adminCode) newRole = 'admin';
+            else if (code === data.devCode) newRole = 'dev';
+            if (!newRole) {
+                alert('Wrong code');
+                return;
+            }
+            // Only one owner allowed
+            if (newRole === 'owner') {
+                const existingOwner = data.users.find(u => u.role === 'owner');
+                if (existingOwner && existingOwner.username !== currentUser.username) {
+                    alert('There can only be one Owner');
+                    return;
+                }
+            }
+            const user = data.users.find(u => u.username === currentUser.username);
+            if (user) user.role = newRole;
+            currentUser.role = newRole;
+            sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+            saveData(data);
+            document.getElementById('upgrade-code').value = '';
+            showApp();
+            alert('Role upgraded to ' + newRole.toUpperCase() + '!');
+        }
+
+        function renderUsers() {
+            const data = getData();
+            const list = document.getElementById('users-list');
+            list.innerHTML = '';
+            data.users.forEach(u => {
+                if (u.username === currentUser.username) return;
+                const div = document.createElement('div');
+                div.style.display = 'flex';
+                div.style.justifyContent = 'space-between';
+                div.style.alignItems = 'center';
+                div.style.padding = '6px 0';
+                div.style.borderBottom = '1px solid var(--border)';
+                let buttons = '';
+                if (currentUser.role === 'owner') {
+                    buttons = `
+                        <button class="small" onclick="changeRole('${u.username}','user')">User</button>
+                        <button class="small" onclick="changeRole('${u.username}','mod')">Mod</button>
+                        <button class="small" onclick="changeRole('${u.username}','dev')">Dev</button>
+                        <button class="small" onclick="changeRole('${u.username}','admin')">Admin</button>
+                    `;
+                } else if (currentUser.role === 'admin') {
+                    buttons = `
+                        <button class="small" onclick="changeRole('${u.username}','user')">User</button>
+                        <button class="small" onclick="changeRole('${u.username}','mod')">Mod</button>
+                        <button class="small" onclick="changeRole('${u.username}','dev')">Dev</button>
+                    `;
+                }
+                div.innerHTML = `
+                    <span>${escapeHtml(u.username)} <span class="role ${u.role}">${u.role.toUpperCase()}</span></span>
+                    <span>${buttons}</span>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function changeRole(username, role) {
+            if (!['owner','admin'].includes(currentUser.role)) return;
+            if (role === 'owner' && currentUser.role !== 'owner') return;
+            const data = getData();
+            const user = data.users.find(u => u.username === username);
+            if (user) user.role = role;
+            saveData(data);
+            renderUsers();
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            if (html.getAttribute('data-theme') === 'dark') {
+                html.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !document.getElementById('app-view').classList.contains('hidden')) {
+                if (document.activeElement.id === 'message-input') sendMessage();
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>
